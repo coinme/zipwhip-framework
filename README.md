@@ -27,7 +27,7 @@ This example feature will watch the global application event bus for a new messa
         // pull out the first argument (eventData is an array of objects)
         // cast it to a message. If it's not a message type, silently return null.
         // If you don't want it to swallow the problem silently, grab it out of the array manually.
-        Message message = EventDataUtil.getExtra(Message.class, e, 0);
+        Message message = EventDataUtil.getExtra(Message.class, eventData, 0);
         
         mailbox.append(message);        
       }
