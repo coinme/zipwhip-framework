@@ -78,7 +78,7 @@ public class AnnotationManager {
                             }
                         });
                     } else {
-                        throw new IllegalStateException("Cannot register a method of this signature.");
+                        throw new IllegalStateException("Cannot register a method of this signature. " + uri);
                     }
                 }
             } else {

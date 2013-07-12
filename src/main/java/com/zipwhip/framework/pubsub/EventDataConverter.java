@@ -1,8 +1,7 @@
-package com.zipwhip.framework;
+package com.zipwhip.framework.pubsub;
 
 import com.zipwhip.framework.pubsub.EventData;
 import com.zipwhip.util.Converter;
-import com.zipwhip.util.Validatable;
 
 /**
  * Created by IntelliJ IDEA.
@@ -12,7 +11,7 @@ import com.zipwhip.util.Validatable;
  *
  * Allows you to convert from 1 type to another
  */
-public interface EventDataConverter<T extends Validatable> extends Converter<EventData, T> {
+public interface EventDataConverter<T> extends Converter<EventData, T> {
 
     // todo: maybe add cool shit here
 

@@ -1,4 +1,4 @@
-package com.zipwhip.framework;
+package com.zipwhip.framework.pubsub;
 
 import com.zipwhip.framework.pubsub.EventData;
 

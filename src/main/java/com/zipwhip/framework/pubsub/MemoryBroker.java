@@ -3,6 +3,7 @@ package com.zipwhip.framework.pubsub;
 import com.zipwhip.executors.ThreadPoolManager;
 import com.zipwhip.lifecycle.DestroyableBase;
 import com.zipwhip.pools.PoolUtil;
+import com.zipwhip.pools.PoolableObjectFactoryBase;
 import com.zipwhip.util.ListDirectory;
 import com.zipwhip.util.LocalDirectory;
 import com.zipwhip.util.StringUtil;
@@ -23,7 +24,15 @@ import java.util.concurrent.Executor;
  */
 public class MemoryBroker extends DestroyableBase implements Broker {
 
-    private static final ObjectPool POOL = PoolUtil.getPool(EventDataPoolableObjectFactory.getInstance());
+    private static final ObjectPool EVENT_DATA_POOL = PoolUtil.getPool(EventDataPoolableObjectFactory.getInstance());
+
+    private final ObjectPool RUN_POOL = PoolUtil.getPool(new PoolableObjectFactoryBase() {
+        @Override
+        public Object makeObject() throws Exception {
+            return new PubSubWorker();
+        }
+    });
+
     private static final Logger LOGGER = LoggerFactory.getLogger(MemoryBroker.class);
 
     private LocalDirectory<String, Callback> directory = new ListDirectory<String, Callback>();
@@ -44,7 +53,7 @@ public class MemoryBroker extends DestroyableBase implements Broker {
 
     @Override
     public void publish(String uri, Object... args) {
-        EventData e = PoolUtil.borrow(POOL);
+        EventData e = PoolUtil.borrow(EVENT_DATA_POOL);
         // copy over the data
         e.setExtras(args);
 
@@ -55,58 +64,16 @@ public class MemoryBroker extends DestroyableBase implements Broker {
         publish(uri, args, false);
     }
 
+    public void publish(String uri, Callback callback) {
+        MemoryEventData e = PoolUtil.borrow(EVENT_DATA_POOL);
+
+        e.success = callback;
+
+        publish(uri, e, true);
+    }
+
 	private void publish(final String uri, final EventData args, final boolean pooled) {
-		executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Collection<Callback> globals = directory.get("*");
-
-                    if (globals != null) {
-                        for (Callback global : globals) {
-                            try {
-                                global.notify(uri, args);
-                            } catch (Exception e) {
-                                LOGGER.error("Problem with global callback", e);
-                            }
-                        }
-                    }
-
-                    Collection<String> parts = UriUtil.cachedParseIntoScopes(uri);
-
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace(StringUtil.join("publish: ", uri, "   (", args, ")"));
-                    }
-
-                    if (parts == null) {
-                        return;
-                    }
-
-                    for (String _uri : parts) {
-                        Collection<Callback> items = directory.get(_uri);
-                        if (items == null) {
-                            continue;
-                        }
-
-                        for (Callback item : items) {
-                            try {
-                                item.notify(uri, args);
-                            } catch (Exception e) {
-                                LOGGER.error(String.format("Problem with observer to uri %s", _uri), e);
-                            }
-                        }
-                    }
-                } finally {
-                    if (pooled && args != null) {
-                        PoolUtil.release(POOL, args);
-                    }
-                }
-            }
-        });
-	}
-
-	public void publish(String uri, Callback callback) {
-		publish(uri, new MemoryEventData(callback));
+		executor.execute(borrowWorker(uri, args, pooled));
 	}
 
 	@Override
@@ -128,6 +95,73 @@ public class MemoryBroker extends DestroyableBase implements Broker {
 	public void unsubscribe(String uri, Callback callback) {
 		directory.remove(uri, callback);
 	}
+
+
+    private PubSubWorker borrowWorker(String uri, EventData args, boolean pooled) {
+        PubSubWorker pubSubWorker;
+
+        try {
+            pubSubWorker = (PubSubWorker) RUN_POOL.borrowObject();
+        } catch (Exception e) {
+            LOGGER.error("Pool", e);
+            pubSubWorker = new PubSubWorker();
+        }
+
+        pubSubWorker.args = args;
+        pubSubWorker.uri = uri;
+        pubSubWorker.pooled = pooled;
+
+        return pubSubWorker;
+    }
+
+    private void releaseWorker(PubSubWorker pubSubWorker) {
+        try {
+            RUN_POOL.returnObject(pubSubWorker);
+        } catch (Exception e) {
+            LOGGER.error("Failed to return?", e);
+        }
+    }
+
+    private class PubSubWorker implements Runnable {
+
+        boolean pooled;
+        String uri;
+        EventData args;
+
+        @Override
+        public void run() {
+            try {
+                Collection<String> parts = UriUtil.cachedParseIntoScopes(uri);
+
+                if (LOGGER.isTraceEnabled()) {
+                    LOGGER.trace(StringUtil.join("publish: ", uri, "   (", args, ")"));
+                }
+
+                if (parts == null) {
+                    return;
+                }
+
+                for (String _uri : parts) {
+                    Collection<Callback> items = directory.get(_uri);
+                    if (items == null) {
+                        continue;
+                    }
+
+                    for (Callback item : items) {
+                        try {
+                            item.notify(uri, args);
+                        } catch (Exception e) {
+                            LOGGER.error(String.format("Problem with observer to uri %s", _uri), e);
+                        }
+                    }
+                }
+            } finally {
+                if (pooled && args != null) {
+                    PoolUtil.release(EVENT_DATA_POOL, args);
+                }
+            }
+        }
+    }
 
 	@Override
 	protected void onDestroy() {

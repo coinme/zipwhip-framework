@@ -1,7 +1,9 @@
-package com.zipwhip.framework;
+package com.zipwhip.framework.pubsub;
 
 import com.zipwhip.framework.pubsub.Callback;
+import com.zipwhip.framework.pubsub.DataCallback;
 import com.zipwhip.framework.pubsub.EventData;
+import com.zipwhip.framework.pubsub.EventDataConverter;
 import com.zipwhip.util.Validatable;
 
 /**
@@ -14,8 +16,8 @@ import com.zipwhip.util.Validatable;
  */
 public class ConvertingCallbackAdapter<T extends Validatable> implements Callback {
 
-    EventDataConverter<T> converter;
-    DataCallback<T> callback;
+    private final EventDataConverter<T> converter;
+    private final DataCallback<T> callback;
 
     public ConvertingCallbackAdapter(EventDataConverter<T> converter, DataCallback<T> callback) {
         this.converter = converter;
@@ -28,5 +30,4 @@ public class ConvertingCallbackAdapter<T extends Validatable> implements Callbac
 
         callback.notify(uri, eventData, data);
     }
-
 }

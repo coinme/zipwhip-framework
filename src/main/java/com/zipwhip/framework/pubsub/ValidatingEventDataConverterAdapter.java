@@ -1,6 +1,5 @@
-package com.zipwhip.framework;
+package com.zipwhip.framework.pubsub;
 
-import com.zipwhip.framework.pubsub.EventData;
 import com.zipwhip.util.DataConversionException;
 import com.zipwhip.util.Validatable;
 
@@ -9,25 +8,17 @@ import com.zipwhip.util.Validatable;
  * User: gregm
  * Date: 12/7/11
  * Time: 2:49 PM
- *
- *
  */
 public class ValidatingEventDataConverterAdapter<T extends Validatable>  implements EventDataConverter<T> {
 
-    EventDataConverter<T> converter;
+    private final EventDataConverter<T> converter;
 
-    protected ValidatingEventDataConverterAdapter(EventDataConverter<T> converter) {
+    public ValidatingEventDataConverterAdapter(EventDataConverter<T> converter) {
         this.converter = converter;
     }
 
     @Override
     public T convert(EventData eventData) throws DataConversionException {
-
-//        NullEventDataConverter will take care of this
-//        if (CollectionUtil.isNullOrEmpty(eventData.getExtras())){
-//            throw new DataConversionException("Can't convert this");
-//        }
-
         T data = converter.convert(eventData);
 
         try {

@@ -5,6 +5,8 @@ package com.zipwhip.framework;
  * User: Michael
  * Date: 1/27/11
  * Time: 8:21 PM
+ *
+ * A plugin that provides no functionality.
  */
 public class NullPlugin extends PluginBase<Plugin<?>> {
 
