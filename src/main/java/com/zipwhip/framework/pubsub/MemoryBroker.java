@@ -159,6 +159,8 @@ public class MemoryBroker extends DestroyableBase implements Broker {
                 if (pooled && args != null) {
                     PoolUtil.release(EVENT_DATA_POOL, args);
                 }
+
+                releaseWorker(this);
             }
         }
     }
