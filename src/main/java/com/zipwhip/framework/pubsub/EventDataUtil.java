@@ -130,14 +130,17 @@ public class EventDataUtil {
         }
         Object object = getExtra(request, index);
         if (object instanceof Set) {
-            TreeSet<T> result = new TreeSet<T>(HashCodeComparator.getInstance());
-            result.addAll((Set<T>) object);
-            return result;
+            return (Set<T>)object;
         } else if (clazz.isInstance(object)) {
             TreeSet<T> result = new TreeSet<T>(HashCodeComparator.getInstance());
             result.add((T)object);
             return result;
+        } else if (object instanceof Collection) {
+            TreeSet<T> result = new TreeSet<T>(HashCodeComparator.getInstance());
+            result.addAll((Collection<T>) object);
+            return result;
         }
+
         return null;
     }
 
