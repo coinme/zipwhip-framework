@@ -20,7 +20,7 @@ public class EventDataPoolableObjectFactory extends PoolableObjectFactoryBase {
 
     @Override
     public Object makeObject() throws Exception {
-        return new EventData();
+        return new MemoryEventData();
     }
 
     @Override

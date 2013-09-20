@@ -30,11 +30,13 @@ public class MemoryEventData extends EventData {
 
     public MemoryEventData(Callback success, Object... extras) {
         this.setExtras(extras);
+
         this.success = success;
     }
 
     public MemoryEventData(Callback success, Callback failure, Object... extras) {
         this.setExtras(extras);
+
         this.success = success;
         this.failure = failure;
     }
