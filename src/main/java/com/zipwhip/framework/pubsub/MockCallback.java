@@ -20,7 +20,7 @@ public class MockCallback implements Callback {
       */
     @Override
     public void notify(String uri, EventData eventData) throws Exception {
-        this.eventData = eventData;
+        this.eventData = new EventData(eventData.getExtras());
         this.notified = true;
         this.uri = uri;
     }
