@@ -1,5 +1,9 @@
 package com.zipwhip.framework.pubsub;
 
+
+import com.zipwhip.pools.PoolUtil;
+import org.apache.commons.pool.ObjectPool;
+
 /**
  * Created by IntelliJ IDEA.
  * User: Michael
@@ -7,6 +11,8 @@ package com.zipwhip.framework.pubsub;
  * Time: 9:18 PM
  */
 public class MemoryEventData extends EventData {
+
+    private static ObjectPool POOL = PoolUtil.getPool(EventDataPoolableObjectFactory.getInstance());
 
     public Callback success;
     public Callback failure;
@@ -29,14 +35,12 @@ public class MemoryEventData extends EventData {
     }
 
     public MemoryEventData(Callback success, Object... extras) {
-        this.setExtras(extras);
-
+        this(extras);
         this.success = success;
     }
 
     public MemoryEventData(Callback success, Callback failure, Object... extras) {
-        this.setExtras(extras);
-
+        this(extras);
         this.success = success;
         this.failure = failure;
     }
@@ -80,9 +84,11 @@ public class MemoryEventData extends EventData {
     }
 
     public void succeed(String uri, Object... args) {
-        EventData e = new MemoryEventData();
+        // pooling only makes sense because succeed/fail are synchronous calls.
+        EventData e = PoolUtil.borrow(POOL);
         e.setExtras(args);
         succeed(uri, e);
+        PoolUtil.release(POOL, e);
     }
 
     public void succeed(String uri) {
@@ -96,9 +102,11 @@ public class MemoryEventData extends EventData {
     }
 
     public void fail(String uri, Object... args) {
-        EventData e = new MemoryEventData();
+        // pooling only makes sense because succeed/fail are synchronous calls.
+        EventData e = PoolUtil.borrow(POOL);
         e.setExtras(args);
         fail(uri, e);
+        PoolUtil.release(POOL, e);
     }
 
     public void fail(String uri) {
@@ -111,4 +119,15 @@ public class MemoryEventData extends EventData {
         success = null;
     }
 
+//    @Override
+//    public String toString() {
+//
+//        java.lang.StringBuffer sb = new StringBuffer();
+//
+//        ToStringStyle.DEFAULT_STYLE.appendStart(sb, this);
+//        ToStringStyle.DEFAULT_STYLE.append(sb, "extras", extras, true);
+//        ToStringStyle.DEFAULT_STYLE.appendEnd(sb, this);
+//
+//        return sb.toString();
+//    }
 }

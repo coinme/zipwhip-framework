@@ -135,7 +135,7 @@ public class MemoryBroker extends CascadingDestroyableBase implements Broker {
         return pubSubWorker;
     }
 
-    private static class PubSubWorker implements Runnable {
+    protected static class PubSubWorker implements Runnable {
 
         private boolean pooled;
         private String uri;
