@@ -53,7 +53,7 @@ public class MemoryBroker extends CascadingDestroyableBase implements Broker {
 
     private LocalDirectory<String, Callback> directory = new ListDirectory<String, Callback>();
 	private Executor executor;
-    private boolean pooling = true;
+    private boolean pooling = false;
 
 	public MemoryBroker() {
 		this(ThreadPoolManager.getInstance().getFixedThreadPool());
