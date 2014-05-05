@@ -21,6 +21,10 @@ public class AnnotationManager {
 
     private static final Map<String, Converter<EventData, ?>> CONVERTERS = Collections.synchronizedMap(new HashMap<String, Converter<EventData, ?>>());
 
+    static {
+        register("*", new StandardEventDataConverter<Object>(Object.class));
+    }
+
     public static void register(String converterName, Converter<EventData, ?> converter) {
         CONVERTERS.put(converterName, converter);
     }
