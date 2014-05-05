@@ -12,6 +12,7 @@ public class MockCallback implements Callback {
     boolean notified = false;
     String uri = null;
     EventData eventData;
+    boolean clone = true;
 
     /*
       * (non-Javadoc)
@@ -20,7 +21,7 @@ public class MockCallback implements Callback {
       */
     @Override
     public void notify(String uri, EventData eventData) throws Exception {
-        this.eventData = new EventData(eventData.getExtras());
+        this.eventData = clone ? new EventData(eventData.getExtras()) : eventData;
         this.notified = true;
         this.uri = uri;
     }
@@ -53,5 +54,13 @@ public class MockCallback implements Callback {
 
     public void setEventData(EventData eventData) {
         this.eventData = eventData;
+    }
+
+    public boolean isClone() {
+        return clone;
+    }
+
+    public void setClone(boolean clone) {
+        this.clone = clone;
     }
 }

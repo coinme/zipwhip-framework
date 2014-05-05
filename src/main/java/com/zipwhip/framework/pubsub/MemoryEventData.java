@@ -3,6 +3,8 @@ package com.zipwhip.framework.pubsub;
 
 import com.zipwhip.pools.PoolUtil;
 import org.apache.commons.pool.ObjectPool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by IntelliJ IDEA.
@@ -12,7 +14,8 @@ import org.apache.commons.pool.ObjectPool;
  */
 public class MemoryEventData extends EventData {
 
-    private static ObjectPool POOL = PoolUtil.getPool(EventDataPoolableObjectFactory.getInstance());
+    private static final Logger LOGGER = LoggerFactory.getLogger(MemoryEventData.class);
+    private static final ObjectPool POOL = PoolUtil.getPool(EventDataPoolableObjectFactory.getInstance());
 
     public Callback success;
     public Callback failure;
@@ -79,7 +82,7 @@ public class MemoryEventData extends EventData {
         try {
             callback.notify(uri, request);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("Failed to call", e);
         }
     }
 
@@ -87,8 +90,11 @@ public class MemoryEventData extends EventData {
         // pooling only makes sense because succeed/fail are synchronous calls.
         EventData e = PoolUtil.borrow(POOL);
         e.setExtras(args);
-        succeed(uri, e);
-        PoolUtil.release(POOL, e);
+        try {
+            succeed(uri, e);
+        } finally {
+            PoolUtil.release(POOL, e);
+        }
     }
 
     public void succeed(String uri) {
@@ -105,8 +111,11 @@ public class MemoryEventData extends EventData {
         // pooling only makes sense because succeed/fail are synchronous calls.
         EventData e = PoolUtil.borrow(POOL);
         e.setExtras(args);
-        fail(uri, e);
-        PoolUtil.release(POOL, e);
+        try {
+            fail(uri, e);
+        } finally {
+            PoolUtil.release(POOL, e);
+        }
     }
 
     public void fail(String uri) {

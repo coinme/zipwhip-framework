@@ -47,12 +47,13 @@ public class MemoryBroker extends CascadingDestroyableBase implements Broker {
 //            worker.setDirectory(null);
 
             // We should clear this reference so EventArgs can be garbage collected if needed.
-            worker.setArgs(null);
+            worker.setEventData(null);
         }
     });
 
     private LocalDirectory<String, Callback> directory = new ListDirectory<String, Callback>();
 	private Executor executor;
+    private boolean pooling = true;
 
 	public MemoryBroker() {
 		this(ThreadPoolManager.getInstance().getFixedThreadPool());
@@ -66,20 +67,20 @@ public class MemoryBroker extends CascadingDestroyableBase implements Broker {
 	}
 
 	public void publish(String uri) {
-        EventData e = PoolUtil.borrow(EVENT_DATA_POOL);
+        EventData e = createEventData();
 
         // The EventData will be released by the PubSubWorker
 
-        execute(uri, e, true);
+        execute(uri, e, pooling);
 	}
 
     @Override
     public void publish(String uri, Object... args) {
-        EventData e = PoolUtil.borrow(EVENT_DATA_POOL);
+        EventData e = createEventData();
         // copy over the data
         e.setExtras(args);
 
-        execute(uri, e, true);
+        execute(uri, e, pooling);
     }
 
 	public void publish(final String uri, final EventData args) {
@@ -87,11 +88,19 @@ public class MemoryBroker extends CascadingDestroyableBase implements Broker {
     }
 
     public void publish(String uri, Callback callback) {
-        MemoryEventData e = PoolUtil.borrow(EVENT_DATA_POOL);
+        MemoryEventData e = createEventData();
 
         e.success = callback;
 
-        execute(uri, e, true);
+        execute(uri, e, pooling);
+    }
+
+    private MemoryEventData createEventData() {
+        if (pooling) {
+            return PoolUtil.borrow(EVENT_DATA_POOL);
+        } else {
+            return new MemoryEventData();
+        }
     }
 
 	@Override
@@ -126,7 +135,7 @@ public class MemoryBroker extends CascadingDestroyableBase implements Broker {
     private PubSubWorker borrowWorker(String uri, EventData args, boolean pooled) {
         PubSubWorker pubSubWorker = PoolUtil.borrowSafely(LOGGER, PubSubWorker.class, RUN_POOL);
 
-        pubSubWorker.setArgs(args);
+        pubSubWorker.setEventData(args);
         pubSubWorker.setUri(uri);
         pubSubWorker.setPooled(pooled);
         pubSubWorker.setDirectory(directory);
@@ -139,7 +148,7 @@ public class MemoryBroker extends CascadingDestroyableBase implements Broker {
 
         private boolean pooled;
         private String uri;
-        private EventData args;
+        private EventData eventData;
         private Directory<String, Callback> directory;
         private ObjectPool pubSubWorkerPool;
 
@@ -149,7 +158,7 @@ public class MemoryBroker extends CascadingDestroyableBase implements Broker {
                 Collection<String> parts = UriUtil.cachedParseIntoScopes(uri);
 
                 if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace(StringUtil.join("publish: ", uri, "   (", args, ")"));
+                    LOGGER.trace(StringUtil.join("publish: ", uri, "   (", eventData, ")"));
                 }
 
                 if (parts == null) {
@@ -164,15 +173,15 @@ public class MemoryBroker extends CascadingDestroyableBase implements Broker {
 
                     for (Callback item : items) {
                         try {
-                            item.notify(uri, args);
+                            item.notify(uri, eventData);
                         } catch (Exception e) {
                             LOGGER.error(String.format("Problem with observer to uri %s", _uri), e);
                         }
                     }
                 }
             } finally {
-                if (pooled && args != null) {
-                    PoolUtil.release(EVENT_DATA_POOL, args);
+                if (pooled && eventData != null) {
+                    PoolUtil.release(EVENT_DATA_POOL, eventData);
                 }
 
                 PoolUtil.releaseSafely(LOGGER, pubSubWorkerPool, this);
@@ -195,12 +204,12 @@ public class MemoryBroker extends CascadingDestroyableBase implements Broker {
             this.uri = uri;
         }
 
-        public EventData getArgs() {
-            return args;
+        public EventData getEventData() {
+            return eventData;
         }
 
-        public void setArgs(EventData args) {
-            this.args = args;
+        public void setEventData(EventData eventData) {
+            this.eventData = eventData;
         }
 
         public Directory<String, Callback> getDirectory() {
@@ -236,5 +245,13 @@ public class MemoryBroker extends CascadingDestroyableBase implements Broker {
 
     public void setExecutor(Executor executor) {
         this.executor = executor;
+    }
+
+    public boolean isPooling() {
+        return pooling;
+    }
+
+    public void setPooling(boolean pooling) {
+        this.pooling = pooling;
     }
 }
