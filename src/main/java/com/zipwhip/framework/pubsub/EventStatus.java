@@ -4,12 +4,13 @@ package com.zipwhip.framework.pubsub;
  * @author Michael
  * @date 5/5/2014
  */
-public class EventStatus {
+public class EventStatus<T> {
 
     private EventData eventData;
     private String uri;
     private Broker broker;
     private UriAgent agent;
+    private T data;
 
     public void succeed(Object... extras) {
         EventDataUtil.succeed(broker, uri, eventData, agent, extras);
@@ -49,5 +50,13 @@ public class EventStatus {
 
     public void setAgent(UriAgent agent) {
         this.agent = agent;
+    }
+
+    public T getData() {
+        return data;
+    }
+
+    public void setData(T data) {
+        this.data = data;
     }
 }

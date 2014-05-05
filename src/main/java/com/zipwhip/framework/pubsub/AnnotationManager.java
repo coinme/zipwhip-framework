@@ -89,6 +89,7 @@ public class AnnotationManager {
                                 status.setEventData(eventData);
                                 status.setUri(uri);
                                 status.setAgent(agent);
+                                status.setData(null);
 
                                 method.invoke(object, eventData);
                             }
@@ -115,13 +116,32 @@ public class AnnotationManager {
                         }
                     });
                 } else if (method.getParameterTypes().length == 1) {
-                    // they just want the eventData
-                    broker.subscribe(uri, new Callback() {
-                        @Override
-                        public void notify(String uri, EventData eventData) throws Exception {
-                            method.invoke(object, converter.convert(eventData));
-                        }
-                    });
+                    if (method.getParameterTypes()[0] == EventStatus.class) {
+                        final UriAgent agent = new UriAgent(uri);
+                        broker.subscribe(uri, new Callback() {
+                            @Override
+                            public void notify(String uri, EventData eventData) throws Exception {
+                                EventStatus status = new EventStatus();
+
+                                status.setBroker(broker);
+                                status.setEventData(eventData);
+                                status.setUri(uri);
+                                status.setAgent(agent);
+                                // If this fails to convert, then we have no recourse...
+                                status.setData(converter.convert(eventData));
+
+                                method.invoke(object, status);
+                            }
+                        });
+                        // they just want the eventData
+                    } else {
+                        broker.subscribe(uri, new Callback() {
+                            @Override
+                            public void notify(String uri, EventData eventData) throws Exception {
+                                method.invoke(object, converter.convert(eventData));
+                            }
+                        });
+                    }
                 } else {
                     throw new IllegalStateException("Cannot register a method of this signature");
                 }

@@ -3,6 +3,8 @@ package com.zipwhip.framework.pubsub;
 import com.zipwhip.executors.SimpleExecutor;
 import com.zipwhip.framework.Application;
 import com.zipwhip.framework.Feature;
+import com.zipwhip.util.Converter;
+import com.zipwhip.util.DataConversionException;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
@@ -21,7 +23,6 @@ public class AnnotationManagerTest {
 
     Application application;
 
-    MockFeature feature = new MockFeature();
 
     @Test
     public void testNoAnnotationPresentObject() throws Exception {
@@ -40,6 +41,8 @@ public class AnnotationManagerTest {
 
     @Test
     public void testApplicationCase() throws Exception {
+        MockFeature feature = new MockFeature();
+
         application = new Application();
         application.setBroker(new MemoryBroker(new SimpleExecutor()));
         application.addPlugin(feature);
@@ -53,6 +56,33 @@ public class AnnotationManagerTest {
         assertTrue(feature.getCountDownLatch().await(5, TimeUnit.SECONDS));
         assertEquals(0, feature.getCountDownLatch().getCount());
         assertTrue("Should have been received", feature.isReceived());
+    }
+
+    @Test
+    public void testEventStatus() throws Exception {
+        AnnotationManager.register("string", new Converter<EventData, Object>() {
+            @Override
+            public Object convert(EventData eventData) throws DataConversionException {
+                return EventDataUtil.getString(eventData);
+            }
+        });
+
+        EventStatusMockFeature feature1 = new EventStatusMockFeature();
+
+        application = new Application();
+        application.setBroker(new MemoryBroker(new SimpleExecutor()));
+        application.addPlugin(feature1);
+        application.init(null);
+
+        assertFalse(feature1.isReceived());
+        assertEquals(1, feature1.getCountDownLatch().getCount());
+
+        application.getBroker().publish("/message/received", "test");
+
+        assertTrue(feature1.getCountDownLatch().await(5, TimeUnit.SECONDS));
+        assertEquals(0, feature1.getCountDownLatch().getCount());
+        assertTrue("Should have been received", feature1.isReceived());
+        assertEquals("test", feature1.getStatus().getData());
     }
 
     private static class MockFeature extends Feature {
@@ -69,6 +99,37 @@ public class AnnotationManagerTest {
         public void onMessageReceived(String uri, EventData eventData){
             received = true;
             latch.countDown();
+        }
+
+        public CountDownLatch getCountDownLatch() {
+            return latch;
+        }
+
+        public boolean isReceived() {
+            return received;
+        }
+    }
+
+    private static class EventStatusMockFeature extends Feature {
+
+        private CountDownLatch latch = new CountDownLatch(1);
+        private boolean received;
+        private EventStatus<String> status;
+
+        @Override
+        protected void onInit() {
+
+        }
+
+        @Subscribe(uri = "/message/received", converter = "string")
+        public void onMessageReceived(EventStatus<String> status){
+            this.status = status;
+            this.received = true;
+            this.latch.countDown();
+        }
+
+        public EventStatus<String> getStatus() {
+            return status;
         }
 
         public CountDownLatch getCountDownLatch() {
