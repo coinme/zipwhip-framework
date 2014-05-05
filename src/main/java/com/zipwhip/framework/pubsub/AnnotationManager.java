@@ -25,7 +25,7 @@ public class AnnotationManager {
         CONVERTERS.put(converterName, converter);
     }
 
-    public static void attach(Broker broker, final Object object) {
+    public static void attach(final Broker broker, final Object object) {
         if (broker == null) {
             throw new IllegalArgumentException("The broker cannot be null");
         } else if (object == null) {
@@ -75,6 +75,21 @@ public class AnnotationManager {
                         broker.subscribe(uri, new Callback() {
                             @Override
                             public void notify(String uri, EventData eventData) throws Exception {
+                                method.invoke(object, eventData);
+                            }
+                        });
+                    } else if (method.getParameterTypes()[0] == EventStatus.class){
+                        final UriAgent agent = new UriAgent(uri);
+                        broker.subscribe(uri, new Callback() {
+                            @Override
+                            public void notify(String uri, EventData eventData) throws Exception {
+                                EventStatus status = new EventStatus();
+
+                                status.setBroker(broker);
+                                status.setEventData(eventData);
+                                status.setUri(uri);
+                                status.setAgent(agent);
+
                                 method.invoke(object, eventData);
                             }
                         });
