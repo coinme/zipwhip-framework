@@ -31,6 +31,10 @@ public class AnnotationManager {
         CONVERTERS.put(converterName, converter);
     }
 
+    public static Converter<EventData, ?> get(String converterName) {
+        return CONVERTERS.get(converterName);
+    }
+
     public static void attach(final Broker broker, final Object object) {
         if (broker == null) {
             throw new IllegalArgumentException("The broker cannot be null");
